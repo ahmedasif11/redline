@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: shoe-showcase-postgres
+    restart: unless-stopped
+    ports:
+      # Host 5434 avoids native Postgres (5432) and other local stacks (5433)
+      - '5434:5432'
+    environment:
+      POSTGRES_USER: redline
+      POSTGRES_PASSWORD: redline
+      POSTGRES_DB: shoe_showcase
+    volumes:
+      # Postgres 18+ expects the mount at /var/lib/postgresql (not .../data)
+      - shoe_showcase_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U redline -d shoe_showcase']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  shoe_showcase_pgdata:

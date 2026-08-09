@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# REDLINE storefront (`web/`)
 
-## Getting Started
+Next.js App Router production app for the shoe showcase. Demo Vite SPA remains under `../Demo/animated-shoe-showcase` for reference only (`WishlistDemo`, `ShoeShowcase` are not part of this app).
 
-First, run the development server:
+## Stack
+
+- Next.js 15 + React 19 + TypeScript
+- Tailwind CSS 4 + Motion + Sonner
+- Drizzle ORM + Postgres when `DATABASE_URL` is set
+- JSON file stores under `.data/` when `DATABASE_URL` is unset
+- Client cart/wishlist persistence (`redline-cart` / `redline-wishlist`)
+
+## Develop
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Database (Phase E+)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Local Postgres (Docker)
 
-## Learn More
+From this directory:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+docker compose up -d
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`.env.local` already points at:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`postgresql://redline:redline@localhost:5434/shoe_showcase`
 
-## Deploy on Vercel
+Then push schema and seed:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npx drizzle-kit push --force
+npm run db:seed
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+(`--force` skips the interactive confirm; use `npm run db:push` in a normal terminal if you prefer prompts.)
+
+Stop with `docker compose down` (add `-v` to wipe the volume).
+
+### Hosted Postgres (Neon etc.)
+
+1. Create a database and copy the connection string into `DATABASE_URL` in `.env.local`.
+2. Run `npm run db:push` and `npm run db:seed`.
+
+Without `DATABASE_URL`, the app keeps working on `.data/*.json` (including admin product CRUD).
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run db:push` | Apply Drizzle schema to Postgres |
+| `npm run db:seed` | Upsert seed catalog into Postgres |
+| `npm run db:studio` | Open Drizzle Studio |
+| `npm run db:generate` | Generate SQL migrations |
