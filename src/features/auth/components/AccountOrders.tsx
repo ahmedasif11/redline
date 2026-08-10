@@ -1,24 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AccountNav from '@/features/auth/components/AccountNav';
+import RequireAuth from '@/features/auth/components/RequireAuth';
 import { useApp } from '@/components/context/AppContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatCents, type Order } from '@/features/commerce';
 
-export default function AccountOrders() {
+function AccountOrdersContent() {
   const { state } = useApp();
-  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (state.hasHydrated && state.hasSessionResolved && !state.user) {
-      router.replace('/login');
-    }
-  }, [state.hasHydrated, state.hasSessionResolved, state.user, router]);
 
   useEffect(() => {
     if (!state.user) return;
@@ -28,17 +21,13 @@ export default function AccountOrders() {
       .finally(() => setLoading(false));
   }, [state.user]);
 
-  if (!state.hasHydrated || !state.hasSessionResolved || !state.user) {
-    return <LoadingSpinner fullscreen size="lg" label="Loading account" />;
-  }
-
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
       <AccountNav />
       <h2 className="text-lg font-bold tracking-wide mb-6">ORDER HISTORY</h2>
 
       {loading ? (
-        <p className="text-gray-500">Loading…</p>
+        <LoadingSpinner size="md" label="Loading orders" />
       ) : orders.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-gray-500 mb-6">No orders yet.</p>
@@ -88,5 +77,13 @@ export default function AccountOrders() {
         </ul>
       )}
     </section>
+  );
+}
+
+export default function AccountOrders() {
+  return (
+    <RequireAuth loginNext="/account/orders">
+      <AccountOrdersContent />
+    </RequireAuth>
   );
 }

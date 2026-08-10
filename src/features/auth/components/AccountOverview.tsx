@@ -1,12 +1,11 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import AccountNav from '@/features/auth/components/AccountNav';
+import RequireAuth from '@/features/auth/components/RequireAuth';
 import { useApp } from '@/components/context/AppContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatCents } from '@/features/commerce';
 import type { Order } from '@/features/commerce';
 
@@ -15,16 +14,9 @@ const inputClass =
 
 export default function AccountOverview() {
   const { state, dispatch } = useApp();
-  const router = useRouter();
   const [name, setName] = useState(state.user?.name ?? '');
   const [orders, setOrders] = useState<Order[]>([]);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (state.hasHydrated && state.hasSessionResolved && !state.user) {
-      router.replace('/login');
-    }
-  }, [state.hasHydrated, state.hasSessionResolved, state.user, router]);
 
   useEffect(() => {
     setName(state.user?.name ?? '');
@@ -73,74 +65,70 @@ export default function AccountOverview() {
     }
   };
 
-  if (!state.hasHydrated || !state.hasSessionResolved || !state.user) {
-    return (
-      <LoadingSpinner fullscreen size="lg" label="Loading account" />
-    );
-  }
-
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-      <AccountNav />
+    <RequireAuth loginNext="/account">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <AccountNav />
 
-      <div className="grid lg:grid-cols-2 gap-10">
-        <form onSubmit={handleSave} className="space-y-4">
-          <h2 className="text-lg font-bold tracking-wide">PROFILE</h2>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={inputClass}
-            placeholder="Full name"
-          />
-          <input
-            disabled
-            value={state.user.email}
-            className={`${inputClass} bg-gray-50 text-gray-500`}
-          />
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-black hover:bg-[#E3002C] disabled:bg-gray-400 text-white px-8 py-3 font-bold tracking-wide transition-colors"
-          >
-            {saving ? 'SAVING...' : 'SAVE PROFILE'}
-          </button>
-        </form>
-
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold tracking-wide">RECENT ORDERS</h2>
-            <Link
-              href="/account/orders"
-              className="text-sm font-bold text-[#E3002C] hover:underline"
+        <div className="grid lg:grid-cols-2 gap-10">
+          <form onSubmit={handleSave} className="space-y-4">
+            <h2 className="text-lg font-bold tracking-wide">PROFILE</h2>
+            <input
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputClass}
+              placeholder="Full name"
+            />
+            <input
+              disabled
+              value={state.user?.email ?? ''}
+              className={`${inputClass} bg-gray-50 text-gray-500`}
+            />
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-black hover:bg-[#E3002C] disabled:bg-gray-400 text-white px-8 py-3 font-bold tracking-wide transition-colors"
             >
-              VIEW ALL
-            </Link>
-          </div>
-          {orders.length === 0 ? (
-            <p className="text-gray-500">No orders yet.</p>
-          ) : (
-            <ul className="space-y-3">
-              {orders.map((order) => (
-                <li
-                  key={order.id}
-                  className="flex items-center justify-between bg-gray-50 p-4"
-                >
-                  <div>
-                    <p className="font-medium text-sm">{order.id}</p>
-                    <p className="text-xs text-gray-500 uppercase">
-                      {order.status.replace('_', ' ')}
+              {saving ? 'SAVING...' : 'SAVE PROFILE'}
+            </button>
+          </form>
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold tracking-wide">RECENT ORDERS</h2>
+              <Link
+                href="/account/orders"
+                className="text-sm font-bold text-[#E3002C] hover:underline"
+              >
+                VIEW ALL
+              </Link>
+            </div>
+            {orders.length === 0 ? (
+              <p className="text-gray-500">No orders yet.</p>
+            ) : (
+              <ul className="space-y-3">
+                {orders.map((order) => (
+                  <li
+                    key={order.id}
+                    className="flex items-center justify-between bg-gray-50 p-4"
+                  >
+                    <div>
+                      <p className="font-medium text-sm">{order.id}</p>
+                      <p className="text-xs text-gray-500 uppercase">
+                        {order.status.replace('_', ' ')}
+                      </p>
+                    </div>
+                    <p className="font-bold text-[#E3002C]">
+                      {formatCents(order.totals.totalCents)}
                     </p>
-                  </div>
-                  <p className="font-bold text-[#E3002C]">
-                    {formatCents(order.totals.totalCents)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </RequireAuth>
   );
 }

@@ -1,11 +1,10 @@
 'use client';
 
 import { useEffect, useState, type FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import AccountNav from '@/features/auth/components/AccountNav';
+import RequireAuth from '@/features/auth/components/RequireAuth';
 import { useApp } from '@/components/context/AppContext';
-import LoadingSpinner from '@/components/LoadingSpinner';
 import type { Address } from '@/features/auth';
 
 const inputClass =
@@ -26,16 +25,9 @@ const emptyForm = {
 
 export default function AccountAddresses() {
   const { state } = useApp();
-  const router = useRouter();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (state.hasHydrated && state.hasSessionResolved && !state.user) {
-      router.replace('/login');
-    }
-  }, [state.hasHydrated, state.hasSessionResolved, state.user, router]);
 
   const load = async () => {
     const res = await fetch('/api/v1/account/addresses');
@@ -85,13 +77,10 @@ export default function AccountAddresses() {
     toast.success('Address removed');
   };
 
-  if (!state.hasHydrated || !state.hasSessionResolved || !state.user) {
-    return <LoadingSpinner fullscreen size="lg" label="Loading account" />;
-  }
-
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-      <AccountNav />
+    <RequireAuth loginNext="/account/addresses">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+        <AccountNav />
 
       <div className="grid lg:grid-cols-2 gap-10">
         <div>
@@ -224,5 +213,6 @@ export default function AccountAddresses() {
         </form>
       </div>
     </section>
+    </RequireAuth>
   );
 }

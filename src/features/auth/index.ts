@@ -13,3 +13,7 @@ export {
   addressSchema,
   mergeGuestSchema,
 } from './schema';
+export {
+  defaultHomeForRole,
+  safeInternalPath,
+} from './lib/paths';

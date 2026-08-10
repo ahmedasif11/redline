@@ -10,10 +10,29 @@ interface ParticleProps {
   y: string;
   size: number;
   delay: number;
-  key?: number;
+  repeatDelay: number;
 }
 
-const Particle = ({ x, y, size, delay }: ParticleProps) => (
+/** Fixed layout so SSR and client hydrate with the same attributes. */
+const PARTICLES: ParticleProps[] = [
+  { x: '12%', y: '18%', size: 4.2, delay: 0.2, repeatDelay: 1.1 },
+  { x: '28%', y: '42%', size: 6.8, delay: 0.8, repeatDelay: 2.4 },
+  { x: '41%', y: '8%', size: 3.5, delay: 1.4, repeatDelay: 0.6 },
+  { x: '55%', y: '63%', size: 7.1, delay: 0.5, repeatDelay: 1.8 },
+  { x: '67%', y: '27%', size: 5.0, delay: 1.9, repeatDelay: 2.9 },
+  { x: '78%', y: '71%', size: 4.6, delay: 0.1, repeatDelay: 1.3 },
+  { x: '88%', y: '35%', size: 8.2, delay: 1.1, repeatDelay: 0.9 },
+  { x: '8%', y: '78%', size: 3.8, delay: 1.6, repeatDelay: 2.1 },
+  { x: '22%', y: '55%', size: 6.1, delay: 0.4, repeatDelay: 1.5 },
+  { x: '36%', y: '88%', size: 5.4, delay: 1.3, repeatDelay: 2.7 },
+  { x: '49%', y: '31%', size: 7.6, delay: 0.7, repeatDelay: 0.4 },
+  { x: '61%', y: '49%', size: 3.2, delay: 1.8, repeatDelay: 2.0 },
+  { x: '73%', y: '14%', size: 5.9, delay: 0.3, repeatDelay: 1.7 },
+  { x: '84%', y: '82%', size: 4.9, delay: 1.0, repeatDelay: 2.5 },
+  { x: '93%', y: '58%', size: 6.4, delay: 1.5, repeatDelay: 0.8 },
+];
+
+const Particle = ({ x, y, size, delay, repeatDelay }: ParticleProps) => (
   <motion.div
     className="absolute rounded-full bg-white/5 pointer-events-none"
     style={{
@@ -32,7 +51,7 @@ const Particle = ({ x, y, size, delay }: ParticleProps) => (
       duration: 4,
       delay,
       repeat: Infinity,
-      repeatDelay: Math.random() * 3,
+      repeatDelay,
     }}
   />
 );
@@ -46,14 +65,6 @@ export default function HeroSection() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
   const containerRef = useRef<HTMLElement | null>(null);
-
-  // Generate particles
-  const particles = Array.from({ length: 15 }, () => ({
-    x: Math.random() * 100 + '%',
-    y: Math.random() * 100 + '%',
-    size: Math.random() * 6 + 3,
-    delay: Math.random() * 2,
-  }));
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -97,10 +108,9 @@ export default function HeroSection() {
     >
       {/* Background particles */}
       <div className="absolute inset-0">
-        {particles.map((particle, i) => {
-          const { x, y, size, delay } = particle;
-          return <Particle key={i} x={x} y={y} size={size} delay={delay} />;
-        })}
+        {PARTICLES.map((particle, i) => (
+          <Particle key={i} {...particle} />
+        ))}
       </div>
 
       {/* Background pattern */}

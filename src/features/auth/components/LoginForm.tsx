@@ -8,6 +8,11 @@ import { toast } from 'sonner';
 import { useApp, type CartItem } from '@/components/context/AppContext';
 import type { Product } from '@/features/catalog';
 import type { SyncedCartLine } from '@/features/auth';
+import RedirectIfAuthenticated from '@/features/auth/components/RedirectIfAuthenticated';
+import {
+  defaultHomeForRole,
+  safeInternalPath,
+} from '@/features/auth/lib/paths';
 
 const inputClass =
   'w-full border-2 border-gray-200 px-4 py-3 focus:border-[#E3002C] focus:outline-none transition-colors';
@@ -88,16 +93,10 @@ export default function LoginForm() {
         },
       });
       toast.success(`Welcome back, ${user.name}`);
-      const next = searchParams.get('next');
-      const safeNext =
-        next && next.startsWith('/') && !next.startsWith('//') ? next : null;
-      if (safeNext) {
-        router.push(safeNext);
-      } else if (role === 'admin') {
-        router.push('/admin');
-      } else {
-        router.push('/account');
-      }
+      const dest =
+        safeInternalPath(searchParams.get('next')) ??
+        defaultHomeForRole(role);
+      router.push(dest);
     } catch {
       toast.error('Unable to sign in');
     } finally {
@@ -107,6 +106,7 @@ export default function LoginForm() {
 
   return (
     <section className="max-w-md mx-auto px-4 py-16 sm:py-20">
+      <RedirectIfAuthenticated next={searchParams.get('next')} />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

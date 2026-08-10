@@ -26,7 +26,7 @@ Open [http://localhost:3000](http://localhost:3000).
 From this directory:
 
 ```bash
-docker compose up -d
+npm run infra:up
 ```
 
 `.env.local` already points at:
@@ -42,7 +42,7 @@ npm run db:seed
 
 (`--force` skips the interactive confirm; use `npm run db:push` in a normal terminal if you prefer prompts.)
 
-Stop with `docker compose down` (add `-v` to wipe the volume).
+Stop with `npm run infra:down` (or `docker compose down -v` to wipe the volume).
 
 ### Hosted Postgres (Neon etc.)
 
@@ -55,6 +55,8 @@ Without `DATABASE_URL`, the app keeps working on `.data/*.json` (including admin
 
 | Script | Purpose |
 |--------|---------|
+| `npm run infra:up` | Start local infra (`docker compose up -d`) |
+| `npm run infra:down` | Stop local infra (`docker compose down`) |
 | `npm run db:push` | Apply Drizzle schema to Postgres |
 | `npm run db:seed` | Upsert seed catalog into Postgres |
 | `npm run db:studio` | Open Drizzle Studio |
