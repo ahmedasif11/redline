@@ -73,9 +73,9 @@ export async function createStripeCheckoutSession(order: Order): Promise<{
           : []),
       ],
       success_url: `${appUrl}/checkout/success?orderId=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/checkout?cancelled=1&orderId=${order.id}`,
+      cancel_url: `${appUrl}/checkout?abandoned=1&orderId=${order.id}&session_id={CHECKOUT_SESSION_ID}`,
     },
-    { idempotencyKey: `checkout-${order.idempotencyKey}` }
+    { idempotencyKey: `checkout-${order.idempotencyKey}-${order.updatedAt}` }
   );
 
   if (!session.url) {
@@ -83,6 +83,32 @@ export async function createStripeCheckoutSession(order: Order): Promise<{
   }
 
   return { sessionId: session.id, url: session.url };
+}
+
+export async function retrieveStripeCheckoutSession(
+  sessionId: string
+): Promise<Stripe.Checkout.Session> {
+  const stripe = getStripe();
+  return stripe.checkout.sessions.retrieve(sessionId);
+}
+
+export async function expireStripeCheckoutSession(
+  sessionId: string
+): Promise<void> {
+  if (!isStripeConfigured() || !sessionId.startsWith('cs_')) return;
+  const stripe = getStripe();
+  try {
+    await stripe.checkout.sessions.expire(sessionId);
+  } catch (error) {
+    const code =
+      error && typeof error === 'object' && 'code' in error
+        ? String((error as { code?: string }).code)
+        : '';
+    if (code === 'checkout_session_expired' || code === 'resource_missing') {
+      return;
+    }
+    console.error('[stripe] expire session failed', sessionId, error);
+  }
 }
 
 export function describeOrderTotal(order: Order): string {

@@ -4,6 +4,7 @@ import {
   requireUser,
   getAccount,
   addAddress,
+  updateAddress,
   deleteAddress,
   addressSchema,
 } from '@/features/auth/server';
@@ -69,6 +70,61 @@ export async function POST(request: Request) {
     }
     return NextResponse.json(
       { error: { code: 'ADDRESS_CREATE_FAILED', message: 'Unable to save' } },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const user = await requireUser();
+    const body = await request.json();
+    const id = typeof body?.id === 'string' ? body.id : '';
+    if (!id) {
+      return NextResponse.json(
+        { error: { code: 'VALIDATION_ERROR', message: 'Address id required' } },
+        { status: 400 }
+      );
+    }
+
+    const parsed = addressSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        {
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid address',
+            details: parsed.error.flatten(),
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    const data = parsed.data;
+    const addresses = await updateAddress(user.id, id, {
+      label: data.label,
+      fullName: data.fullName,
+      line1: data.line1,
+      line2: data.line2 || undefined,
+      city: data.city,
+      state: data.state,
+      postalCode: data.postalCode,
+      country: data.country,
+      phone: data.phone || undefined,
+      isDefault: data.isDefault ?? false,
+    });
+
+    return NextResponse.json({ data: { addresses } });
+  } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json(
+        { error: { code: error.code, message: error.message } },
+        { status: error.status }
+      );
+    }
+    return NextResponse.json(
+      { error: { code: 'ADDRESS_UPDATE_FAILED', message: 'Unable to update' } },
       { status: 500 }
     );
   }

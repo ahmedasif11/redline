@@ -7,10 +7,14 @@ import AccountNav from '@/features/auth/components/AccountNav';
 import RequireAuth from '@/features/auth/components/RequireAuth';
 import { useApp } from '@/components/context/AppContext';
 import { formatCents } from '@/features/commerce';
-import type { Order } from '@/features/commerce';
+import type { Order, OrderStatus } from '@/features/commerce';
 
 const inputClass =
   'w-full border-2 border-gray-200 px-4 py-3 focus:border-[#E3002C] focus:outline-none transition-colors';
+
+function statusLabel(status: OrderStatus) {
+  return status.replaceAll('_', ' ');
+}
 
 export default function AccountOverview() {
   const { state, dispatch } = useApp();
@@ -111,12 +115,22 @@ export default function AccountOverview() {
                 {orders.map((order) => (
                   <li
                     key={order.id}
-                    className="flex items-center justify-between bg-gray-50 p-4"
+                    className="flex items-center justify-between bg-gray-50 p-4 gap-3"
                   >
                     <div>
                       <p className="font-medium text-sm">{order.id}</p>
-                      <p className="text-xs text-gray-500 uppercase">
-                        {order.status.replace('_', ' ')}
+                      <p
+                        className={`inline-block mt-1 text-xs font-bold uppercase tracking-wide px-2 py-0.5 ${
+                          order.status === 'pending_payment'
+                            ? 'bg-amber-100 text-amber-800'
+                            : order.status === 'cancelled'
+                              ? 'bg-gray-200 text-gray-700'
+                              : order.status === 'paid'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {statusLabel(order.status)}
                       </p>
                     </div>
                     <p className="font-bold text-[#E3002C]">

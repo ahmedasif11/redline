@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, isNull, sql } from 'drizzle-orm';
 import { getDb } from '@/db/client';
 import { orders } from '@/db/schema';
 import { orderFromRow, orderToRow } from '@/db/mappers';
@@ -78,6 +78,28 @@ export async function dbUpdateOrder(
   };
   await dbSaveOrder(next);
   return next;
+}
+
+export async function dbClaimUnlinkedOrdersByEmail(
+  userId: string,
+  email: string
+): Promise<number> {
+  const db = getDb();
+  const normalized = email.trim().toLowerCase();
+  const result = await db
+    .update(orders)
+    .set({
+      userId,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        isNull(orders.userId),
+        sql`lower(${orders.shipping}->>'email') = ${normalized}`
+      )
+    )
+    .returning({ id: orders.id });
+  return result.length;
 }
 
 export async function dbListOrdersByUserId(userId: string): Promise<Order[]> {

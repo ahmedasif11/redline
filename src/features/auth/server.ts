@@ -26,6 +26,7 @@ export {
   getCurrentUser,
   updateProfileName,
   addAddress,
+  updateAddress,
   deleteAddress,
   mergeGuestData,
   syncCart,

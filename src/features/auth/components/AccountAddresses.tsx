@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import AccountNav from '@/features/auth/components/AccountNav';
 import RequireAuth from '@/features/auth/components/RequireAuth';
@@ -23,11 +23,55 @@ const emptyForm = {
   isDefault: true,
 };
 
+function formFromAddress(address: Address) {
+  return {
+    label: address.label,
+    fullName: address.fullName,
+    line1: address.line1,
+    line2: address.line2 ?? '',
+    city: address.city,
+    state: address.state,
+    postalCode: address.postalCode,
+    country: address.country || 'US',
+    phone: address.phone ?? '',
+    isDefault: address.isDefault,
+  };
+}
+
+function matchesQuery(address: Address, query: string) {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return [
+    address.label,
+    address.fullName,
+    address.line1,
+    address.line2,
+    address.city,
+    address.state,
+    address.postalCode,
+  ].some((value) => value?.toLowerCase().includes(q));
+}
+
 export default function AccountAddresses() {
   const { state } = useApp();
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const showSearch = addresses.length > 6;
+  const visibleAddresses = useMemo(() => {
+    const sorted = [...addresses].sort(
+      (a, b) => Number(b.isDefault) - Number(a.isDefault)
+    );
+    return sorted.filter((address) => matchesQuery(address, query));
+  }, [addresses, query]);
+
+  const resetForm = (hasAddresses: boolean) => {
+    setEditingId(null);
+    setForm({ ...emptyForm, isDefault: !hasAddresses });
+  };
 
   const load = async () => {
     const res = await fetch('/api/v1/account/addresses');
@@ -45,23 +89,32 @@ export default function AccountAddresses() {
     setSaving(true);
     try {
       const res = await fetch('/api/v1/account/addresses', {
-        method: 'POST',
+        method: editingId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify(
+          editingId ? { id: editingId, ...form } : form
+        ),
       });
       const payload = await res.json();
       if (!res.ok) {
         toast.error(payload?.error?.message ?? 'Unable to save address');
         return;
       }
-      setAddresses(payload.data.addresses);
-      setForm({ ...emptyForm, isDefault: false });
-      toast.success('Address saved');
+      const next = payload.data.addresses as Address[];
+      const wasEditing = Boolean(editingId);
+      setAddresses(next);
+      resetForm(next.length > 0);
+      toast.success(wasEditing ? 'Address updated' : 'Address saved');
     } catch {
       toast.error('Unable to save address');
     } finally {
       setSaving(false);
     }
+  };
+
+  const startEdit = (address: Address) => {
+    setEditingId(address.id);
+    setForm(formFromAddress(address));
   };
 
   const handleDelete = async (id: string) => {
@@ -73,7 +126,11 @@ export default function AccountAddresses() {
       toast.error(payload?.error?.message ?? 'Unable to delete');
       return;
     }
-    setAddresses(payload.data.addresses);
+    const next = payload.data.addresses as Address[];
+    setAddresses(next);
+    if (editingId === id) {
+      resetForm(next.length > 0);
+    }
     toast.success('Address removed');
   };
 
@@ -84,53 +141,92 @@ export default function AccountAddresses() {
 
       <div className="grid lg:grid-cols-2 gap-10">
         <div>
-          <h2 className="text-lg font-bold tracking-wide mb-4">SAVED ADDRESSES</h2>
+          <h2 className="text-lg font-bold tracking-wide mb-4">
+            SAVED ADDRESSES
+            {addresses.length > 0 ? (
+              <span className="text-gray-400 font-medium"> ({addresses.length})</span>
+            ) : null}
+          </h2>
           {addresses.length === 0 ? (
             <p className="text-gray-500">No addresses yet.</p>
           ) : (
-            <ul className="space-y-4">
-              {addresses.map((address) => (
-                <li key={address.id} className="bg-gray-50 p-5">
-                  <div className="flex justify-between gap-4">
-                    <div>
-                      <p className="font-bold">
-                        {address.label}
-                        {address.isDefault ? (
-                          <span className="ml-2 text-xs text-[#E3002C]">
-                            DEFAULT
-                          </span>
-                        ) : null}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {address.fullName}
-                        <br />
-                        {address.line1}
-                        {address.line2 ? (
-                          <>
-                            <br />
-                            {address.line2}
-                          </>
-                        ) : null}
-                        <br />
-                        {address.city}, {address.state} {address.postalCode}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(address.id)}
-                      className="text-sm font-bold text-gray-500 hover:text-[#E3002C]"
+            <>
+              {showSearch ? (
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search addresses"
+                  className={`${inputClass} mb-3`}
+                  autoComplete="off"
+                />
+              ) : null}
+              <ul
+                className={`space-y-2 ${
+                  showSearch ? 'max-h-[28rem] overflow-y-auto pr-1' : ''
+                }`}
+              >
+                {visibleAddresses.length === 0 ? (
+                  <li className="text-sm text-gray-500 py-4">
+                    No addresses match that search.
+                  </li>
+                ) : (
+                  visibleAddresses.map((address) => (
+                    <li
+                      key={address.id}
+                      className={`px-4 py-3 border-2 ${
+                        address.isDefault
+                          ? 'border-[#E3002C] bg-red-50/30'
+                          : 'border-gray-100 bg-gray-50'
+                      }`}
                     >
-                      REMOVE
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                      <div className="flex justify-between gap-4">
+                        <div className="min-w-0">
+                          <p className="font-bold text-sm">
+                            {address.label}
+                            {address.isDefault ? (
+                              <span className="ml-2 text-[10px] tracking-wide text-[#E3002C]">
+                                DEFAULT
+                              </span>
+                            ) : null}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-0.5 truncate">
+                            {address.fullName} · {address.line1}
+                            {address.line2 ? `, ${address.line2}` : ''}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {address.city}, {address.state} {address.postalCode}
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => startEdit(address)}
+                            className="text-xs font-bold tracking-wide text-gray-700 hover:text-[#E3002C]"
+                          >
+                            EDIT
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(address.id)}
+                            className="text-xs font-bold tracking-wide text-gray-500 hover:text-[#E3002C]"
+                          >
+                            REMOVE
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </>
           )}
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <h2 className="text-lg font-bold tracking-wide">ADD ADDRESS</h2>
+          <h2 className="text-lg font-bold tracking-wide">
+            {editingId ? 'EDIT ADDRESS' : 'ADD ADDRESS'}
+          </h2>
           <input
             required
             placeholder="Label (Home, Work…)"
@@ -192,6 +288,13 @@ export default function AccountAddresses() {
               <option value="GB">United Kingdom</option>
             </select>
           </div>
+          <input
+            type="tel"
+            placeholder="Phone (optional)"
+            value={form.phone}
+            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+            className={inputClass}
+          />
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input
               type="checkbox"
@@ -203,13 +306,28 @@ export default function AccountAddresses() {
             />
             Set as default
           </label>
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-[#E3002C] hover:bg-[#C5001F] disabled:bg-gray-400 text-white px-8 py-3 font-bold tracking-wide transition-colors"
-          >
-            {saving ? 'SAVING...' : 'SAVE ADDRESS'}
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-[#E3002C] hover:bg-[#C5001F] disabled:bg-gray-400 text-white px-8 py-3 font-bold tracking-wide transition-colors"
+            >
+              {saving
+                ? 'SAVING...'
+                : editingId
+                  ? 'UPDATE ADDRESS'
+                  : 'SAVE ADDRESS'}
+            </button>
+            {editingId ? (
+              <button
+                type="button"
+                onClick={() => resetForm(addresses.length > 0)}
+                className="border-2 border-gray-200 px-8 py-3 font-bold tracking-wide hover:border-gray-400 transition-colors"
+              >
+                CANCEL
+              </button>
+            ) : null}
+          </div>
         </form>
       </div>
     </section>

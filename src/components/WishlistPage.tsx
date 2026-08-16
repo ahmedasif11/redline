@@ -27,6 +27,10 @@ export default function WishlistPage() {
   const handleAddToCart = (product: Product) => {
     const defaultSize = product.sizes[0];
     const defaultColor = product.colors[0];
+    if (defaultSize == null || !defaultColor) {
+      toast.error('This product is missing size or color options');
+      return;
+    }
     dispatch({
       type: 'ADD_TO_CART',
       payload: { product, size: defaultSize, color: defaultColor },

@@ -11,6 +11,7 @@ import { BRAND } from '@/lib/brand';
 import { readJsonStorage, writeJsonStorage } from '@/lib/storage';
 import {
   CATALOG_PRODUCTS,
+  getProductImages,
   type Product,
   type ProductCategory,
 } from '@/features/catalog';
@@ -109,17 +110,48 @@ function persistWishlist(wishlist: string[]) {
   writeJsonStorage(BRAND.storageKeys.wishlist, wishlist);
 }
 
+function normalizeCartItem(item: CartItem): CartItem {
+  const images = getProductImages(item);
+  return {
+    ...item,
+    images,
+    image: images[0] ?? item.image ?? '',
+    brand: item.brand ?? BRAND.name,
+    tags: item.tags ?? [],
+    stockBySize: item.stockBySize ?? {},
+    colors: item.colors ?? [],
+    sizes: item.sizes ?? [],
+  };
+}
+
+function mergeCartWithProducts(cart: CartItem[], products: Product[]): CartItem[] {
+  const byId = new Map(products.map((product) => [product.id, product]));
+  return cart.map((item) => {
+    const fresh = byId.get(item.id);
+    if (!fresh) return normalizeCartItem(item);
+    return normalizeCartItem({
+      ...item,
+      ...fresh,
+      quantity: item.quantity,
+      selectedSize: item.selectedSize,
+      selectedColor: item.selectedColor,
+    });
+  });
+}
+
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case 'HYDRATE_PERSISTED':
-      persistCart(action.payload.cart);
+    case 'HYDRATE_PERSISTED': {
+      const cart = action.payload.cart.map(normalizeCartItem);
+      persistCart(cart);
       persistWishlist(action.payload.wishlist);
       return {
         ...state,
-        cart: action.payload.cart,
+        cart,
         wishlist: action.payload.wishlist,
         hasHydrated: true,
       };
+    }
 
     case 'ADD_TO_CART': {
       const { product, size, color } = action.payload;
@@ -258,8 +290,11 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'SET_SESSION_RESOLVED':
       return { ...state, hasSessionResolved: action.payload };
 
-    case 'SET_PRODUCTS':
-      return { ...state, products: action.payload };
+    case 'SET_PRODUCTS': {
+      const cart = mergeCartWithProducts(state.cart, action.payload);
+      persistCart(cart);
+      return { ...state, products: action.payload, cart };
+    }
 
     default:
       return state;
@@ -279,13 +314,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const cart = readJsonStorage<CartItem[]>(BRAND.storageKeys.cart, []).map(
-      (item) => ({
-        ...item,
-        images: item.images?.length ? item.images : [item.image],
-        brand: item.brand ?? BRAND.name,
-        tags: item.tags ?? [],
-        stockBySize: item.stockBySize ?? {},
-      })
+      normalizeCartItem
     );
     const wishlist = readJsonStorage<string[]>(
       BRAND.storageKeys.wishlist,

@@ -21,6 +21,15 @@ export function getProductById(id: string): Product | undefined {
   return CATALOG_PRODUCTS.find((product) => product.id === id);
 }
 
+export function getProductImages(product: {
+  image?: string;
+  images?: string[] | null;
+}): string[] {
+  const fromList = (product.images ?? []).filter(Boolean);
+  if (fromList.length > 0) return fromList;
+  return product.image ? [product.image] : [];
+}
+
 export function getRelatedProducts(product: Product, limit = 4): Product[] {
   return CATALOG_PRODUCTS.filter(
     (item) =>

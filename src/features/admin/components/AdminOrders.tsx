@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { formatCents, type Order, type OrderStatus } from '@/features/commerce';
@@ -13,10 +13,25 @@ const STATUSES: OrderStatus[] = [
   'refunded',
 ];
 
+type StatusFilter = 'all' | 'pending_payment' | 'cancelled' | 'paid';
+
+function statusLabel(status: OrderStatus) {
+  return status.replaceAll('_', ' ');
+}
+
+function statusClass(status: OrderStatus) {
+  if (status === 'pending_payment') return 'bg-amber-100 text-amber-800';
+  if (status === 'cancelled') return 'bg-gray-200 text-gray-700';
+  if (status === 'refunded') return 'bg-gray-100 text-gray-600';
+  if (status === 'paid') return 'bg-green-100 text-green-800';
+  return 'bg-black text-white';
+}
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<StatusFilter>('all');
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +56,22 @@ export default function AdminOrders() {
       cancelled = true;
     };
   }, []);
+
+  const visibleOrders = useMemo(() => {
+    if (filter === 'all') return orders;
+    if (filter === 'pending_payment') {
+      return orders.filter((order) => order.status === 'pending_payment');
+    }
+    if (filter === 'cancelled') {
+      return orders.filter((order) => order.status === 'cancelled');
+    }
+    return orders.filter(
+      (order) =>
+        order.status === 'paid' ||
+        order.status === 'fulfilled' ||
+        order.status === 'refunded'
+    );
+  }, [filter, orders]);
 
   const updateStatus = async (orderId: string, status: OrderStatus) => {
     setSavingId(orderId);
@@ -70,6 +101,13 @@ export default function AdminOrders() {
     return <LoadingSpinner size="md" label="Loading orders" />;
   }
 
+  const filters: { id: StatusFilter; label: string }[] = [
+    { id: 'all', label: 'All' },
+    { id: 'pending_payment', label: 'Awaiting payment' },
+    { id: 'cancelled', label: 'Cancelled' },
+    { id: 'paid', label: 'Paid+' },
+  ];
+
   return (
     <div className="space-y-8">
       <div>
@@ -78,14 +116,31 @@ export default function AdminOrders() {
         </p>
         <h1 className="text-3xl font-bold tracking-tight">Orders</h1>
         <p className="text-gray-600 mt-2">
-          Update status for paid demo and Stripe orders. Refunds via Stripe
-          dashboard for now.
+          Unpaid drafts and customer cancels appear here as soon as you refresh.
+          Refunds via Stripe dashboard for now.
         </p>
       </div>
 
-      {orders.length === 0 ? (
+      <div className="flex flex-wrap gap-2">
+        {filters.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => setFilter(item.id)}
+            className={`px-4 py-2 text-xs font-bold tracking-wide uppercase border-2 ${
+              filter === item.id
+                ? 'border-black bg-black text-white'
+                : 'border-gray-200 text-gray-700 hover:border-black'
+            }`}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {visibleOrders.length === 0 ? (
         <p className="text-gray-500 bg-white border border-gray-200 p-6">
-          No orders yet.
+          No orders in this view.
         </p>
       ) : (
         <div className="bg-white border border-gray-200 overflow-x-auto">
@@ -100,7 +155,7 @@ export default function AdminOrders() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {orders.map((order) => (
+              {visibleOrders.map((order) => (
                 <tr key={order.id}>
                   <td className="px-4 py-3 align-top">
                     <p className="font-medium">{order.id}</p>
@@ -111,6 +166,11 @@ export default function AdminOrders() {
                       {order.items.length} item
                       {order.items.length === 1 ? '' : 's'}
                     </p>
+                    <span
+                      className={`inline-block mt-2 text-[10px] font-bold uppercase tracking-wide px-2 py-1 ${statusClass(order.status)}`}
+                    >
+                      {statusLabel(order.status)}
+                    </span>
                   </td>
                   <td className="px-4 py-3 align-top">
                     <p>{order.shipping.fullName}</p>
@@ -138,7 +198,7 @@ export default function AdminOrders() {
                     >
                       {STATUSES.map((status) => (
                         <option key={status} value={status}>
-                          {status.replace('_', ' ')}
+                          {statusLabel(status)}
                         </option>
                       ))}
                     </select>

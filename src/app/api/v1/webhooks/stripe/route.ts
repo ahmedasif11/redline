@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import {
-  getOrderById,
-  markOrderPaid,
   CheckoutValidationError,
-  findOrderByStripeSessionId,
+  abandonStripeCheckout,
+  fulfillOrderFromStripeSession,
   getStripe,
   isStripeConfigured,
 } from '@/features/commerce/server';
@@ -58,28 +57,21 @@ export async function POST(request: Request) {
   }
 
   try {
-    if (event.type === 'checkout.session.completed') {
+    if (
+      event.type === 'checkout.session.completed' ||
+      event.type === 'checkout.session.async_payment_succeeded'
+    ) {
       const session = event.data.object;
-      const orderId =
-        session.metadata?.orderId ?? session.client_reference_id ?? undefined;
-
-      let order = orderId ? await getOrderById(orderId) : null;
-      if (!order && session.id) {
-        order = await findOrderByStripeSessionId(session.id);
-      }
-
+      const order = await fulfillOrderFromStripeSession(session);
       if (!order) {
         console.error('[stripe webhook] order not found for session', session.id);
-      } else if (order.status !== 'paid') {
-        await markOrderPaid(order.id, {
-          provider: 'stripe',
-          stripeSessionId: session.id,
-          stripePaymentIntentId:
-            typeof session.payment_intent === 'string'
-              ? session.payment_intent
-              : session.payment_intent?.id,
-        });
       }
+    } else if (
+      event.type === 'checkout.session.expired' ||
+      event.type === 'checkout.session.async_payment_failed'
+    ) {
+      const session = event.data.object;
+      await abandonStripeCheckout(session);
     }
 
     return NextResponse.json({ received: true });

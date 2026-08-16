@@ -73,7 +73,13 @@ export default function AuthSessionBootstrap() {
 
   // Debounced sync of cart/wishlist to server when logged in
   useEffect(() => {
-    if (!state.user?.isLoggedIn || !state.hasHydrated) return;
+    if (
+      !state.user?.isLoggedIn ||
+      !state.hasHydrated ||
+      !state.hasSessionResolved
+    ) {
+      return;
+    }
 
     const timer = setTimeout(() => {
       void fetch('/api/v1/account/cart', {
@@ -92,7 +98,13 @@ export default function AuthSessionBootstrap() {
     }, 600);
 
     return () => clearTimeout(timer);
-  }, [state.cart, state.wishlist, state.user?.isLoggedIn, state.hasHydrated]);
+  }, [
+    state.cart,
+    state.wishlist,
+    state.user?.isLoggedIn,
+    state.hasHydrated,
+    state.hasSessionResolved,
+  ]);
 
   return null;
 }

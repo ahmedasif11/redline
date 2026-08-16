@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Clock3, XCircle } from 'lucide-react';
 import { useApp } from '@/components/context/AppContext';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import type { Order } from '@/features/commerce';
@@ -17,11 +17,10 @@ export default function CheckoutSuccess({ orderId }: { orderId?: string }) {
   const [loading, setLoading] = useState(Boolean(orderId));
 
   useEffect(() => {
-    dispatch({ type: 'CLEAR_CART' });
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('redline-checkout-idemp');
     }
-  }, [dispatch]);
+  }, []);
 
   useEffect(() => {
     if (!orderId) {
@@ -53,6 +52,11 @@ export default function CheckoutSuccess({ orderId }: { orderId?: string }) {
     };
   }, [orderId]);
 
+  useEffect(() => {
+    if (!orderId) return;
+    dispatch({ type: 'CLEAR_CART' });
+  }, [dispatch, orderId]);
+
   if (loading) {
     return (
       <section className="max-w-3xl mx-auto px-4 py-20 text-center">
@@ -76,6 +80,19 @@ export default function CheckoutSuccess({ orderId }: { orderId?: string }) {
     );
   }
 
+  const confirmed =
+    order.status === 'paid' ||
+    order.status === 'fulfilled' ||
+    order.status === 'refunded';
+  const pending = order.status === 'pending_payment';
+
+  const heading = confirmed
+    ? 'ORDER CONFIRMED'
+    : pending
+      ? 'PAYMENT PENDING'
+      : 'ORDER CANCELLED';
+  const Icon = confirmed ? CheckCircle2 : pending ? Clock3 : XCircle;
+
   return (
     <section className="max-w-3xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
       <motion.div
@@ -84,7 +101,7 @@ export default function CheckoutSuccess({ orderId }: { orderId?: string }) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
       >
-        <CheckCircle2
+        <Icon
           className="mx-auto mb-4 text-[#E3002C]"
           size={56}
           aria-hidden
@@ -93,17 +110,38 @@ export default function CheckoutSuccess({ orderId }: { orderId?: string }) {
           {BRAND.name}
         </p>
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
-          ORDER CONFIRMED
+          {heading}
         </h1>
-        <p className="text-gray-600">
-          Thanks {order.shipping.fullName}. Confirmation sent to{' '}
-          {order.shipping.email}
-          {order.emailSentAt ? '' : ' when email is configured'}.
-        </p>
+        {confirmed ? (
+          <p className="text-gray-600">
+            Thanks {order.shipping.fullName}. Confirmation sent to{' '}
+            {order.shipping.email}
+            {order.emailSentAt ? '' : ' when email is configured'}.
+          </p>
+        ) : pending ? (
+          <p className="text-gray-600">
+            Payment is still processing, or was not completed. You can finish
+            paying from your account order history.
+          </p>
+        ) : (
+          <p className="text-gray-600">
+            This order was cancelled and you were not charged. You can pay again
+            from your account.
+          </p>
+        )}
         <p className="text-sm text-gray-500 mt-3">
           Order ID: <span className="font-medium text-black">{order.id}</span>
+          {' · '}
+          <span className="uppercase tracking-wide">
+            {order.status.replaceAll('_', ' ')}
+          </span>
           {order.paymentProvider === 'demo' ? ' · Demo payment' : ''}
         </p>
+        {pending ? (
+          <p className="text-sm text-amber-700 mt-2">
+            This updates to paid once Stripe confirms it.
+          </p>
+        ) : null}
       </motion.div>
 
       <div className="bg-gray-50 p-6 sm:p-8 space-y-4 mb-10">
@@ -158,18 +196,37 @@ export default function CheckoutSuccess({ orderId }: { orderId?: string }) {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 justify-center">
-        <Link
-          href="/shop"
-          className="inline-block text-center bg-[#E3002C] hover:bg-[#C5001F] text-white px-8 py-3 font-bold tracking-wide transition-colors"
-        >
-          CONTINUE SHOPPING
-        </Link>
-        <Link
-          href="/"
-          className="inline-block text-center border-2 border-black text-black hover:bg-black hover:text-white px-8 py-3 font-bold tracking-wide transition-all"
-        >
-          BACK HOME
-        </Link>
+        {confirmed ? (
+          <>
+            <Link
+              href="/shop"
+              className="inline-block text-center bg-[#E3002C] hover:bg-[#C5001F] text-white px-8 py-3 font-bold tracking-wide transition-colors"
+            >
+              CONTINUE SHOPPING
+            </Link>
+            <Link
+              href="/"
+              className="inline-block text-center border-2 border-black text-black hover:bg-black hover:text-white px-8 py-3 font-bold tracking-wide transition-all"
+            >
+              BACK HOME
+            </Link>
+          </>
+        ) : (
+          <>
+            <Link
+              href="/account/orders"
+              className="inline-block text-center bg-[#E3002C] hover:bg-[#C5001F] text-white px-8 py-3 font-bold tracking-wide transition-colors"
+            >
+              VIEW ORDER HISTORY
+            </Link>
+            <Link
+              href="/shop"
+              className="inline-block text-center border-2 border-black text-black hover:bg-black hover:text-white px-8 py-3 font-bold tracking-wide transition-all"
+            >
+              BACK TO SHOP
+            </Link>
+          </>
+        )}
       </div>
     </section>
   );

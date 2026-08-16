@@ -115,6 +115,10 @@ export default function FeaturedProducts({
     e.stopPropagation();
     const defaultSize = product.sizes[Math.floor(product.sizes.length / 2)];
     const defaultColor = product.colors[0];
+    if (defaultSize == null || !defaultColor) {
+      toast.error('This product is missing size or color options');
+      return;
+    }
 
     dispatch({
       type: 'ADD_TO_CART',
@@ -361,7 +365,8 @@ export default function FeaturedProducts({
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {filteredProducts.map((product, index) => {
-                const isInWishlist = state.wishlist.includes(product.id);
+                const isInWishlist =
+                  state.hasHydrated && state.wishlist.includes(product.id);
 
                 return (
                   <motion.div
@@ -372,7 +377,6 @@ export default function FeaturedProducts({
                     exit={{ opacity: 0, y: -50 }}
                     transition={{ duration: 0.6, delay: index * 0.1 }}
                     whileHover={{ y: -8, scale: 1.02 }}
-                    layout
                   >
                     <div className="relative aspect-square bg-gray-50 overflow-hidden">
                       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
@@ -466,7 +470,7 @@ export default function FeaturedProducts({
                       </div>
 
                       <p className="text-sm text-gray-600 mb-4">
-                        {product.colors.length} colors available
+                        {product.colors?.length ?? 0} colors available
                       </p>
 
                       <div className="flex items-center gap-2 mb-4">

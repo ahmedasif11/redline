@@ -181,7 +181,10 @@ export default function Footer() {
         >
           <div className="flex flex-col space-y-6">
             <div className="flex flex-col items-center space-y-4 text-center">
-              <div className="text-xs sm:text-sm text-gray-400">
+              <div
+                className="text-xs sm:text-sm text-gray-400"
+                suppressHydrationWarning
+              >
                 &copy; {new Date().getFullYear()} {BRAND.name}. All rights
                 reserved.
               </div>

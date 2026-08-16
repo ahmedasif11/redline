@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import CheckoutSuccess from '@/features/commerce/components/CheckoutSuccess';
+import { confirmStripeCheckoutSession } from '@/features/commerce/server';
 import { BRAND } from '@/lib/brand';
 
 export const metadata: Metadata = {
@@ -14,5 +15,14 @@ type PageProps = {
 
 export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
   const params = await searchParams;
+
+  if (params.session_id) {
+    try {
+      await confirmStripeCheckoutSession(params.session_id);
+    } catch (error) {
+      console.error('[checkout success] stripe confirm failed', error);
+    }
+  }
+
   return <CheckoutSuccess orderId={params.orderId} />;
 }

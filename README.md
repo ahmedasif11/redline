@@ -19,6 +19,10 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Deploy (Vercel)
+
+Production hosting, env vars, Neon Postgres, Stripe webhooks, and seed steps: [DEPLOYMENT.md](./DEPLOYMENT.md).
+
 ## Database (Phase E+)
 
 ### Local Postgres (Docker)

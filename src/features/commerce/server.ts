@@ -5,7 +5,16 @@ export {
   sanitizeShipping,
   CheckoutValidationError,
 } from './checkout';
-export { createCheckoutSession, markOrderPaid } from './service';
+export {
+  createCheckoutSession,
+  markOrderPaid,
+  fulfillOrderFromStripeSession,
+  confirmStripeCheckoutSession,
+  abandonStripeCheckout,
+  abandonCheckoutByReturn,
+  resumeOrderCheckout,
+  cancelCustomerOrder,
+} from './service';
 export {
   getOrderById,
   saveOrder,
@@ -13,6 +22,7 @@ export {
   findOrderByIdempotencyKey,
   findOrderByStripeSessionId,
   listOrdersByUserId,
+  claimUnlinkedOrdersByEmail,
 } from './orders-store';
 export {
   createStripeCheckoutSession,

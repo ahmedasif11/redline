@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { Heart, Star, ShoppingCart, ChevronLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '@/components/ImageWithFallback';
@@ -10,6 +10,7 @@ import { useApp } from '@/components/context/AppContext';
 import type { Product } from '@/features/catalog';
 import { BRAND } from '@/lib/brand';
 import { buildShopHref } from '@/features/catalog';
+import ProductImageGallery from '@/features/catalog/components/ProductImageGallery';
 
 interface ProductDetailProps {
   product: Product;
@@ -22,8 +23,15 @@ export default function ProductDetail({ product, related }: ProductDetailProps) 
   const [selectedSize, setSelectedSize] = useState<number | null>(null);
   const [selectedColor, setSelectedColor] = useState(product.colors[0] ?? '');
 
-  const isInWishlist = state.wishlist.includes(product.id);
-  const images = product.images.length > 0 ? product.images : [product.image];
+  const isInWishlist =
+    state.hasHydrated && state.wishlist.includes(product.id);
+  const firstColor = product.colors[0] ?? '';
+
+  useEffect(() => {
+    setActiveImage(0);
+    setSelectedSize(null);
+    setSelectedColor(firstColor);
+  }, [product.id, firstColor]);
 
   const handleAddToCart = () => {
     if (!selectedSize) {
@@ -79,63 +87,11 @@ export default function ProductDetail({ product, related }: ProductDetailProps) 
         </Link>
 
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16">
-          <div className="space-y-4">
-            <div className="relative aspect-square bg-gray-50 rounded-lg overflow-hidden">
-              <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
-                {product.isNew && (
-                  <span className="bg-[#E3002C] text-white px-3 py-1 text-xs font-bold tracking-wide">
-                    NEW
-                  </span>
-                )}
-                {product.onSale && (
-                  <span className="bg-black text-white px-3 py-1 text-xs font-bold tracking-wide">
-                    SALE
-                  </span>
-                )}
-              </div>
-
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={images[activeImage]}
-                  className="h-full w-full"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.35 }}
-                >
-                  <ImageWithFallback
-                    src={images[activeImage]}
-                    alt={`${product.name} view ${activeImage + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {images.length > 1 && (
-              <div className="grid grid-cols-4 gap-3">
-                {images.map((src, index) => (
-                  <button
-                    key={src}
-                    type="button"
-                    onClick={() => setActiveImage(index)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
-                      activeImage === index
-                        ? 'border-[#E3002C]'
-                        : 'border-transparent hover:border-gray-300'
-                    }`}
-                    aria-label={`Show image ${index + 1}`}
-                  >
-                    <ImageWithFallback
-                      src={src}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <ProductImageGallery
+            product={product}
+            activeImage={activeImage}
+            onActiveImageChange={setActiveImage}
+          />
 
           <motion.div
             className="space-y-8"

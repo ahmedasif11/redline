@@ -23,6 +23,7 @@ export {
   getCatalogCopy,
   getCollectionBySlug,
   getProductById,
+  getProductImages,
   getProductBySlug,
   getRelatedProducts,
   hasActiveFilters,

@@ -5,8 +5,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Heart, Star, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { Product, useApp } from '@/components/context/AppContext';
-import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { useEscapeKey, useFocusTrap } from '@/hooks/useFocusTrap';
+import ProductImageGallery from '@/features/catalog/components/ProductImageGallery';
+import { getProductImages } from '@/features/catalog';
 import { toast } from 'sonner';
 
 interface ProductModalProps {
@@ -19,6 +20,7 @@ export default function ProductModal({ product, isOpen, onClose }: ProductModalP
   const { state, dispatch } = useApp();
   const [selectedSize, setSelectedSize] = useState<number | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>('');
+  const [activeImage, setActiveImage] = useState(0);
   const panelRef = useFocusTrap(isOpen && !!product);
   const handleClose = useCallback(() => onClose(), [onClose]);
   useEscapeKey(isOpen && !!product, handleClose);
@@ -27,12 +29,33 @@ export default function ProductModal({ product, isOpen, onClose }: ProductModalP
     if (product) {
       setSelectedColor(product.colors[0] || '');
       setSelectedSize(null);
+      setActiveImage(0);
     }
   }, [product]);
 
+  React.useEffect(() => {
+    if (!isOpen || !product) return;
+    const images = getProductImages(product);
+    if (images.length <= 1) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        setActiveImage((current) => Math.max(0, current - 1));
+      } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        setActiveImage((current) => Math.min(images.length - 1, current + 1));
+      }
+    };
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isOpen, product]);
+
   if (!product) return null;
 
-  const isInWishlist = state.wishlist.includes(product.id);
+  const isInWishlist =
+    state.hasHydrated && state.wishlist.includes(product.id);
 
   const handleAddToCart = () => {
     if (!selectedSize) {
@@ -87,48 +110,29 @@ export default function ProductModal({ product, isOpen, onClose }: ProductModalP
               role="dialog"
               aria-modal="true"
               aria-label={product.name}
-              className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto"
+              className="relative bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="grid md:grid-cols-2 gap-8 p-8">
-                {/* Product Image */}
-                <div className="relative">
-                  <motion.button
-                    type="button"
-                    aria-label="Close product details"
-                    onClick={onClose}
-                    className="absolute top-0 right-0 p-2 bg-white/80 rounded-full z-10"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <X size={20} />
-                  </motion.button>
+              <motion.button
+                type="button"
+                aria-label="Close product details"
+                onClick={onClose}
+                className="absolute top-3 right-3 p-2 bg-white rounded-full z-20 shadow-sm border border-gray-200"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <X size={20} />
+              </motion.button>
 
-                  {/* Badges */}
-                  <div className="absolute top-0 left-0 z-10 flex flex-col gap-2">
-                    {product.isNew && (
-                      <span className="bg-[#E3002C] text-white px-3 py-1 text-xs font-bold tracking-wide">
-                        NEW
-                      </span>
-                    )}
-                    {product.onSale && (
-                      <span className="bg-black text-white px-3 py-1 text-xs font-bold tracking-wide">
-                        SALE
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="aspect-square bg-gray-50 rounded-lg overflow-hidden">
-                    <ImageWithFallback
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
+              <div className="grid md:grid-cols-2 gap-8 p-8 pr-14">
+                <ProductImageGallery
+                  product={product}
+                  activeImage={activeImage}
+                  onActiveImageChange={setActiveImage}
+                />
 
                 {/* Product Details */}
                 <div className="space-y-6">

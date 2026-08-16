@@ -42,33 +42,11 @@ export default function LoadingSpinner({
       aria-live="polite"
       aria-label={label ?? `${BRAND.name} loading`}
     >
-      {/* Mark + ring */}
+      {/* Brand mark */}
       <div className="relative flex items-center justify-center">
-        {!reduceMotion ? (
-          <motion.span
-            className={cn(
-              'absolute rounded-full border border-[#E3002C]/40',
-              size === 'sm'
-                ? 'inset-[-6px]'
-                : size === 'lg'
-                  ? 'inset-[-10px]'
-                  : 'inset-[-8px]'
-            )}
-            aria-hidden
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2.8, repeat: Infinity, ease: 'linear' }}
-            style={{
-              borderTopColor: '#E3002C',
-              borderRightColor: 'transparent',
-              borderBottomColor: 'rgba(227,0,44,0.25)',
-              borderLeftColor: 'transparent',
-            }}
-          />
-        ) : null}
-
         <motion.div
           className={cn(
-            'relative z-10 flex items-center justify-center bg-[#E3002C] font-black tracking-tighter text-white',
+            'flex items-center justify-center bg-[#E3002C] font-black tracking-tighter text-white',
             mark
           )}
           animate={

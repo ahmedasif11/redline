@@ -169,7 +169,7 @@ export default function Header() {
               whileTap={{ scale: 0.95 }}
             >
               <Heart size={20} />
-              {state.wishlist.length > 0 && (
+              {state.hasHydrated && state.wishlist.length > 0 && (
                 <motion.span
                   className="absolute -top-1 -right-1 bg-[#E3002C] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
                   initial={{ scale: 0 }}
@@ -218,7 +218,7 @@ export default function Header() {
               whileTap={{ scale: 0.95 }}
             >
               <ShoppingCart size={20} />
-              {getCartItemCount(state.cart) > 0 && (
+              {state.hasHydrated && getCartItemCount(state.cart) > 0 && (
                 <motion.span
                   className="absolute -top-1 -right-1 bg-[#E3002C] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
                   initial={{ scale: 0 }}

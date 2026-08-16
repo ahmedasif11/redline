@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
@@ -14,14 +14,23 @@ import {
 import { ImageWithFallback } from '@/components/ImageWithFallback';
 import { BRAND } from '@/lib/brand';
 import { formatDollars } from '@/features/commerce';
+import type { Address } from '@/features/auth';
+import AddressPickerModal from '@/features/commerce/components/AddressPickerModal';
 
 const inputClass =
   'w-full border-2 border-gray-200 px-4 py-3 focus:border-[#E3002C] focus:outline-none transition-colors';
 
-export default function CheckoutForm() {
+export default function CheckoutForm({
+  paymentAbandoned = false,
+}: {
+  paymentAbandoned?: boolean;
+}) {
   const { state, dispatch } = useApp();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('new');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [form, setForm] = useState({
     email: '',
     fullName: '',
@@ -35,12 +44,74 @@ export default function CheckoutForm() {
   });
 
   useEffect(() => {
-    if (!state.user) return;
+    if (!paymentAbandoned) return;
+    toast.message(
+      'Payment was not completed. Your unpaid order is saved in Order history.'
+    );
+    router.replace('/checkout');
+  }, [paymentAbandoned, router]);
+
+  useEffect(() => {
+    const existing = sessionStorage.getItem('redline-checkout-idemp');
+    if (existing) {
+      setIdempotencyKey(existing);
+      return;
+    }
+    const key = `chk_${crypto.randomUUID()}`;
+    sessionStorage.setItem('redline-checkout-idemp', key);
+    setIdempotencyKey(key);
+  }, []);
+
+  const applyAddress = (address: Address, email: string) => {
+    setForm((prev) => ({
+      ...prev,
+      email: prev.email || email,
+      fullName: address.fullName,
+      line1: address.line1,
+      line2: address.line2 ?? '',
+      city: address.city,
+      state: address.state,
+      postalCode: address.postalCode,
+      country: address.country || 'US',
+      phone: address.phone ?? prev.phone,
+    }));
+  };
+
+  useEffect(() => {
+    if (!state.user) {
+      setSavedAddresses([]);
+      setSelectedAddressId('new');
+      return;
+    }
+
     setForm((prev) => ({
       ...prev,
       email: prev.email || state.user!.email,
       fullName: prev.fullName || state.user!.name,
     }));
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/v1/account/addresses');
+        const payload = await res.json();
+        if (!res.ok || cancelled) return;
+        const addresses: Address[] = payload.data.addresses ?? [];
+        setSavedAddresses(addresses);
+        const defaultAddress =
+          addresses.find((address) => address.isDefault) ?? addresses[0];
+        if (defaultAddress) {
+          setSelectedAddressId(defaultAddress.id);
+          applyAddress(defaultAddress, state.user!.email);
+        }
+      } catch {
+        // Guest-style checkout if addresses fail to load
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [state.user]);
 
   const subtotal = getCartTotal(state.cart);
@@ -51,18 +122,21 @@ export default function CheckoutForm() {
   const tax = Math.round(subtotal * 0.08 * 100) / 100;
   const total = subtotal + shipping + tax;
 
-  const idempotencyKey = useMemo(() => {
-    if (typeof window === 'undefined') return '';
-    const existing = sessionStorage.getItem('redline-checkout-idemp');
-    if (existing) return existing;
-    const key = `chk_${crypto.randomUUID()}`;
-    sessionStorage.setItem('redline-checkout-idemp', key);
-    return key;
-  }, []);
+  const [idempotencyKey, setIdempotencyKey] = useState('');
 
   const updateField = (key: keyof typeof form, value: string) => {
+    if (
+      selectedAddressId !== 'new' &&
+      key !== 'email'
+    ) {
+      setSelectedAddressId('new');
+    }
     setForm((prev) => ({ ...prev, [key]: value }));
   };
+
+  const selectedSavedAddress = savedAddresses.find(
+    (address) => address.id === selectedAddressId
+  );
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -207,6 +281,86 @@ export default function CheckoutForm() {
 
           <div>
             <h2 className="text-lg font-bold tracking-wide mb-4">SHIPPING</h2>
+            {state.user ? (
+              savedAddresses.length > 0 ? (
+                <div className="mb-4 space-y-3">
+                  <div
+                    className={`border-2 p-4 ${
+                      selectedSavedAddress
+                        ? 'border-[#E3002C] bg-red-50/40'
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        {selectedSavedAddress ? (
+                          <>
+                            <p className="font-bold text-sm">
+                              {selectedSavedAddress.label}
+                              {selectedSavedAddress.isDefault ? (
+                                <span className="ml-2 text-[10px] tracking-wide text-[#E3002C]">
+                                  DEFAULT
+                                </span>
+                              ) : null}
+                            </p>
+                            <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                              {selectedSavedAddress.fullName}
+                              <br />
+                              {selectedSavedAddress.line1}
+                              {selectedSavedAddress.line2 ? (
+                                <>
+                                  <br />
+                                  {selectedSavedAddress.line2}
+                                </>
+                              ) : null}
+                              <br />
+                              {selectedSavedAddress.city},{' '}
+                              {selectedSavedAddress.state}{' '}
+                              {selectedSavedAddress.postalCode}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-bold text-sm">New address</p>
+                            <p className="text-xs text-gray-600 mt-1">
+                              Fill in the fields below, or change to a saved
+                              address.
+                            </p>
+                          </>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPickerOpen(true)}
+                        className="text-sm font-bold tracking-wide text-gray-700 hover:text-[#E3002C] shrink-0"
+                      >
+                        CHANGE
+                      </button>
+                    </div>
+                  </div>
+                  {selectedAddressId !== 'new' ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedAddressId('new')}
+                      className="text-sm text-gray-600 hover:text-[#E3002C] font-medium"
+                    >
+                      Use a different address
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-600 mb-4">
+                  No saved addresses yet.{' '}
+                  <Link
+                    href="/account/addresses"
+                    className="text-[#E3002C] font-medium hover:underline"
+                  >
+                    Add one in your account
+                  </Link>{' '}
+                  to reuse it here.
+                </p>
+              )
+            ) : null}
             <div className="space-y-4">
               <input
                 required
@@ -344,6 +498,20 @@ export default function CheckoutForm() {
           </div>
         </div>
       </form>
+
+      {state.user ? (
+        <AddressPickerModal
+          isOpen={pickerOpen}
+          addresses={savedAddresses}
+          selectedId={selectedAddressId}
+          onSelect={(address) => {
+            setSelectedAddressId(address.id);
+            applyAddress(address, state.user!.email);
+            setPickerOpen(false);
+          }}
+          onClose={() => setPickerOpen(false)}
+        />
+      ) : null}
     </section>
   );
 }

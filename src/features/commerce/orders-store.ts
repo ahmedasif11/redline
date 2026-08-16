@@ -3,6 +3,7 @@ import path from 'path';
 import { DATA_DIR } from '@/lib/data-dir';
 import { isDatabaseConfigured } from '@/db/client';
 import {
+  dbClaimUnlinkedOrdersByEmail,
   dbFindOrderByIdempotencyKey,
   dbFindOrderByStripeSessionId,
   dbGetOrderById,
@@ -87,6 +88,29 @@ export async function updateOrder(
   store[id] = next;
   await writeStore(store);
   return next;
+}
+
+export async function claimUnlinkedOrdersByEmail(
+  userId: string,
+  email: string
+): Promise<number> {
+  const normalized = email.trim().toLowerCase();
+  if (isDatabaseConfigured()) {
+    return dbClaimUnlinkedOrdersByEmail(userId, normalized);
+  }
+  const store = await readStore();
+  let claimed = 0;
+  const now = new Date().toISOString();
+  for (const order of Object.values(store)) {
+    if (!order.userId && order.shipping.email === normalized) {
+      store[order.id] = { ...order, userId, updatedAt: now };
+      claimed += 1;
+    }
+  }
+  if (claimed > 0) {
+    await writeStore(store);
+  }
+  return claimed;
 }
 
 export async function listOrdersByUserId(userId: string): Promise<Order[]> {

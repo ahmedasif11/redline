@@ -22,6 +22,7 @@ import {
   setCart,
   setWishlist,
 } from './accounts-store';
+import { claimUnlinkedOrdersByEmail } from '@/features/commerce/orders-store';
 import type { LoginInput, RegisterInput } from './schema';
 import type { Address, AuthUser, SyncedCartLine } from './types';
 
@@ -55,6 +56,7 @@ export async function registerUser(input: RegisterInput): Promise<AuthUser> {
   });
 
   await getAccount(user.id);
+  await claimUnlinkedOrdersByEmail(user.id, user.email);
   const token = await createSessionToken(toPublicUser(user));
   await setSessionCookie(token);
   return toPublicUser(user);
@@ -72,6 +74,7 @@ export async function loginUser(input: LoginInput): Promise<AuthUser> {
     throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password', 401);
   }
 
+  await claimUnlinkedOrdersByEmail(user.id, user.email);
   const token = await createSessionToken(toPublicUser(user));
   await setSessionCookie(token);
   return toPublicUser(user);
@@ -171,6 +174,46 @@ export async function addAddress(
     next.isDefault = true;
   }
   addresses.push(next);
+  await setAddresses(userId, addresses);
+  return addresses;
+}
+
+export async function updateAddress(
+  userId: string,
+  addressId: string,
+  patch: Omit<Address, 'id'>
+): Promise<Address[]> {
+  const account = await getAccount(userId);
+  const existing = account.addresses.find((a) => a.id === addressId);
+  if (!existing) {
+    throw new AuthError('NOT_FOUND', 'Address not found', 404);
+  }
+
+  const next: Address = {
+    ...patch,
+    id: addressId,
+    line2: patch.line2 || undefined,
+    phone: patch.phone || undefined,
+  };
+
+  let addresses = account.addresses.map((a) =>
+    a.id === addressId ? next : a
+  );
+
+  if (next.isDefault) {
+    addresses = addresses.map((a) => ({
+      ...a,
+      isDefault: a.id === addressId,
+    }));
+  } else if (!addresses.some((a) => a.isDefault)) {
+    const fallbackId =
+      addresses.find((a) => a.id !== addressId)?.id ?? addressId;
+    addresses = addresses.map((a) => ({
+      ...a,
+      isDefault: a.id === fallbackId,
+    }));
+  }
+
   await setAddresses(userId, addresses);
   return addresses;
 }
