@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from 'motion/react';
 import { BRAND } from '@/lib/brand';
 import { cn } from '@/lib/cn';
+import BrandMark from '@/components/BrandMark';
 
 interface LoadingSpinnerProps {
   size?: 'sm' | 'md' | 'lg';
@@ -21,7 +22,7 @@ export default function LoadingSpinner({
   const reduceMotion = useReducedMotion();
 
   const mark =
-    size === 'sm' ? 'w-9 h-9 text-[10px]' : size === 'lg' ? 'w-14 h-14 text-base' : 'w-11 h-11 text-xs';
+    size === 'sm' ? 'w-9 h-9' : size === 'lg' ? 'w-14 h-14' : 'w-11 h-11';
   const word =
     size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-2xl sm:text-3xl' : 'text-lg';
   const bar = size === 'sm' ? 'w-20' : size === 'lg' ? 'w-40' : 'w-28';
@@ -45,10 +46,7 @@ export default function LoadingSpinner({
       {/* Brand mark */}
       <div className="relative flex items-center justify-center">
         <motion.div
-          className={cn(
-            'flex items-center justify-center bg-[#E3002C] font-black tracking-tighter text-white',
-            mark
-          )}
+          className={cn('flex items-center justify-center', mark)}
           animate={
             reduceMotion ? undefined : { scale: [1, 1.04, 1] }
           }
@@ -58,7 +56,7 @@ export default function LoadingSpinner({
               : { duration: 1.8, repeat: Infinity, ease: 'easeInOut' }
           }
         >
-          RL
+          <BrandMark className={mark} />
         </motion.div>
       </div>
 

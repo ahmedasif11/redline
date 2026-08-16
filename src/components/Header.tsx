@@ -8,6 +8,7 @@ import { Search, ShoppingCart, Menu, X, Heart, User } from 'lucide-react';
 import { useApp, getCartItemCount } from '@/components/context/AppContext';
 import { BRAND } from '@/lib/brand';
 import { buildShopHref } from '@/features/catalog';
+import BrandMark from '@/components/BrandMark';
 
 type NavItem = {
   name: string;
@@ -95,14 +96,7 @@ export default function Header() {
             whileTap={{ scale: 0.95 }}
           >
             <Link href="/" className="flex items-center space-x-2">
-              <div
-                className="w-8 h-8 rounded-sm bg-[#E3002C] flex items-center justify-center"
-                aria-hidden
-              >
-                <span className="text-white text-xs font-black tracking-tighter">
-                  RL
-                </span>
-              </div>
+              <BrandMark className="h-8 w-8" />
               <span className="text-white text-lg sm:text-xl font-bold tracking-wider">
                 {BRAND.name}
               </span>

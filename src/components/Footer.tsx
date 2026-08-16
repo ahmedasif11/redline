@@ -10,6 +10,7 @@ import {
   FaInstagram,
 } from 'react-icons/fa';
 import { BRAND } from '@/lib/brand';
+import BrandMark from '@/components/BrandMark';
 
 export default function Footer() {
   const shopLinks = [
@@ -63,14 +64,7 @@ export default function Footer() {
             transition={{ duration: 0.6 }}
           >
             <div className="flex items-center space-x-2">
-              <div
-                className="w-8 h-8 sm:w-10 sm:h-10 rounded-sm bg-[#E3002C] flex items-center justify-center"
-                aria-hidden
-              >
-                <span className="text-white text-xs sm:text-sm font-black tracking-tighter">
-                  RL
-                </span>
-              </div>
+              <BrandMark className="h-8 w-8 sm:h-10 sm:w-10" />
               <span className="text-xl sm:text-2xl font-bold tracking-wider">
                 {BRAND.name}
               </span>

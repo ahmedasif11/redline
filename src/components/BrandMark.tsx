@@ -1,0 +1,25 @@
+import { cn } from '@/lib/cn';
+
+type BrandMarkProps = {
+  className?: string;
+};
+
+export default function BrandMark({ className }: BrandMarkProps) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 32 32"
+      fill="none"
+      className={cn('h-8 w-8 shrink-0', className)}
+      aria-hidden
+    >
+      <rect width="32" height="32" rx="4" fill="#E3002C" />
+      <path
+        fill="#fff"
+        d="M6.2 7.2h8.1c3.05 0 5.05 1.85 5.05 4.55 0 2.05-1.1 3.5-2.95 4.15L20.4 24.8h-3.85l-3.7-8.05H9.45v8.05H6.2V7.2Zm3.25 2.7v5.15h4.55c1.55 0 2.5-.9 2.5-2.55s-.95-2.6-2.5-2.6H9.45Z"
+      />
+      <path fill="#fff" d="M22.15 7.2h3.25v14.9H29.8v2.7H22.15V7.2Z" />
+      <path fill="#fff" d="M4 26.6h24l4-2.2H8L4 26.6Z" opacity=".45" />
+    </svg>
+  );
+}

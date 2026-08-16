@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { useApp } from '@/components/context/AppContext';
 import { BRAND } from '@/lib/brand';
 import { cn } from '@/lib/cn';
+import BrandMark from '@/components/BrandMark';
 
 const links = [
   { href: '/admin', label: 'Dashboard' },
@@ -32,14 +33,7 @@ export default function AdminNav() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link href="/admin" className="flex items-center gap-2">
-              <div
-                className="w-8 h-8 bg-[#E3002C] flex items-center justify-center"
-                aria-hidden
-              >
-                <span className="text-white text-xs font-black tracking-tighter">
-                  RL
-                </span>
-              </div>
+              <BrandMark className="h-8 w-8" />
               <div>
                 <p className="text-[#E3002C] text-xs font-bold tracking-wider">
                   {BRAND.name} OPS
